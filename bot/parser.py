@@ -29,5 +29,7 @@ def find_song(message):
 def get_accords(link):
     response = requests.get(link)
     soup = BeautifulSoup(response.text, 'lxml')
+    title = soup.find('title').text
+
     pre = soup.find('pre', class_='field__podbor_new podbor__text')
-    print(pre.text)
+    return {'title': title, 'chords': pre.text}

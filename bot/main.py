@@ -2,7 +2,7 @@ import os
 
 import telebot
 
-from parser import find_song
+from parser import find_song, get_accords
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
@@ -34,22 +34,20 @@ def find_tracklist(message):
         return bot.send_message(message.from_user.id, 'Nothing found', reply_markup=keyboard)
 
     tracklist_dict = {}
-    for i in list_of_tuples:
+    for i, elem in enumerate(list_of_tuples):
         keys = tracklist_dict.keys()
-        if i.name not in keys and len(keys) != 5:
-            # tracklist_dict[i.name] = {'url': i.link}
-            tracklist_dict[i.name] = {'url': i.link}
+        if elem.name not in keys and len(keys) != 5:
+            tracklist_dict[elem.name] = {'callback_data': str(i)}
 
     keyboard_tracklist = telebot.util.quick_markup(tracklist_dict, row_width=2)
-    # keyboard_tracklist = telebot.types.ReplyKeyboardMarkup(row_width=2)
-    # for i in list_of_tuples[:5]:
-    #     keyboard_tracklist.add(i.name)
     bot.send_message(message.from_user.id, 'Choose from the list below ', reply_markup=keyboard_tracklist)
 
 
 @bot.callback_query_handler(func=lambda callback: True)
 def check_callback_data(callback):
-    print(callback.data)
+    track = get_accords('https'+str(callback.data))
+    bot.send_message(callback.from_user.id, track['title'])
+    bot.send_message(callback.from_user.id, track['chords'])
 
 
 bot.polling(none_stop=True, interval=0)
