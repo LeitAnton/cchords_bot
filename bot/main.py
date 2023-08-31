@@ -1,5 +1,4 @@
 import os
-
 import telebot
 
 from parser import find_songs_am_dm, get_accords
@@ -39,7 +38,7 @@ def find_tracklist(message):
     for index, elem in enumerate(name_link.keys()):
         TRACKLIST[str(index)] = name_link[elem]
         songs[elem] = {'callback_data': str(index)}
-
+    print(message)
     tracks_keyboard = telebot.util.quick_markup(songs, row_width=2)
     bot.send_message(message.from_user.id, 'Choose from the list below ', reply_markup=tracks_keyboard)
 
