@@ -2,7 +2,7 @@ import os
 
 import telebot
 
-from parser import find_song, get_accords
+from parser import find_songs_am_dm, get_accords
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
@@ -12,6 +12,8 @@ keyboard = telebot.types.ReplyKeyboardMarkup(True, True)
 keyboard1 = telebot.types.ReplyKeyboardMarkup(True)
 keyboard.row('/find_chords')
 keyboard1.row('/back')
+
+TRACKLIST = {}
 
 
 @bot.message_handler(commands=['start'])
@@ -29,25 +31,26 @@ def after_text(message):
 
 
 def find_tracklist(message):
-    list_of_tuples = find_song(message.text)
-    if type(list_of_tuples) == str:
+    name_link = find_songs_am_dm(message.text)
+    if name_link is None:
         return bot.send_message(message.from_user.id, 'Nothing found', reply_markup=keyboard)
 
-    tracklist_dict = {}
-    for i, elem in enumerate(list_of_tuples):
-        keys = tracklist_dict.keys()
-        if elem.name not in keys and len(keys) != 5:
-            tracklist_dict[elem.name] = {'callback_data': str(i)}
+    songs = {}
+    for index, elem in enumerate(name_link.keys()):
+        TRACKLIST[str(index)] = name_link[elem]
+        songs[elem] = {'callback_data': str(index)}
 
-    keyboard_tracklist = telebot.util.quick_markup(tracklist_dict, row_width=2)
-    bot.send_message(message.from_user.id, 'Choose from the list below ', reply_markup=keyboard_tracklist)
+    tracks_keyboard = telebot.util.quick_markup(songs, row_width=2)
+    bot.send_message(message.from_user.id, 'Choose from the list below ', reply_markup=tracks_keyboard)
 
 
 @bot.callback_query_handler(func=lambda callback: True)
 def check_callback_data(callback):
-    track = get_accords('https'+str(callback.data))
+    track = get_accords(str(TRACKLIST[callback.data]))
     bot.send_message(callback.from_user.id, track['title'])
-    bot.send_message(callback.from_user.id, track['chords'])
+    # bot.send_message(callback.from_user.id, track['chords'], reply_markup=keyboard)
+    for elem in track['chords']:
+        bot.send_message(callback.from_user.id, elem, reply_markup=keyboard)
 
 
 bot.polling(none_stop=True, interval=0)
