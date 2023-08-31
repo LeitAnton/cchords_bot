@@ -3,7 +3,7 @@ import sqlite3
 con = sqlite3.connect("../database.sqlite")
 cur = con.cursor()
 
-#
+
 #     {'id': 576195008,
 #     'is_bot': False,
 #     'first_name': 'Антон',
@@ -15,7 +15,6 @@ cur = con.cursor()
 #     'supports_inline_queries': None,
 #     'is_premium': None,
 #     'added_to_attachment_menu': None}
-#
 
 
 def start_base():
@@ -25,13 +24,13 @@ def start_base():
                                     );""")
 
     cur.execute("""CREATE TABLE IF NOT EXISTS favorite (
-                                    id INT PRIMARY KEY,
+                                    id INT AUTO_INCREMENT PRIMARY KEY,
                                     user_id INT,
                                     song_id INT
                                     );""")
 
     cur.execute("""CREATE TABLE IF NOT EXISTS song (
-                                    song_id INT PRIMARY KEY,
+                                    song_id INT AUTO_INCREMENT PRIMARY KEY,
                                     artist_name VARCHAR(255),
                                     song_name VARCHAR(255),
                                     link VARCHAR(255)
@@ -44,13 +43,11 @@ def add_user(user_id, username):
 
 
 def add_song(artist_name, song_name, link):
-    cur.execute(f"""INSERT INTO song (song_id,
-                                      artist_name, 
+    cur.execute(f"""INSERT INTO song (artist_name, 
                                       song_name, 
                                       link
                                       )
-                    VALUES ((SELECT COUNT(*) FROM song)+1,
-                             {artist_name},  
+                    VALUES ({artist_name},  
                              {song_name},
                              {link}
                              );""")
@@ -64,3 +61,14 @@ def select_songs():
 def select_users():
     cur.execute("""SELECT song_id, artist_name, song_name, link 
                    FROM song;""")
+
+
+def select_favorites(user_id=None, song_id=None):
+    if user_id:
+        cur.execute(f"""SELECT favorite_id, user_id, song_id
+                        FROM favorite
+                        WHERE user_id = {user_id};""")
+    elif song_id:
+        cur.execute(f"""SELECT favorite_id, user_id, song_id
+                        FROM favorite
+                        WHERE song_id = {song_id};""")
