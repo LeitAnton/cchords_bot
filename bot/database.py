@@ -3,7 +3,7 @@ import sqlite3
 con = sqlite3.connect("../database.sqlite")
 cur = con.cursor()
 
-
+#     Telegram user
 #     {'id': 576195008,
 #     'is_bot': False,
 #     'first_name': 'Антон',
@@ -17,10 +17,10 @@ cur = con.cursor()
 #     'added_to_attachment_menu': None}
 
 
-def start_base():
+def create_tables():
     cur.execute("""CREATE TABLE IF NOT EXISTS user (
                                     user_id INT PRIMARY KEY,
-                                    username VARCHAR(255),
+                                    username VARCHAR(255)
                                     );""")
 
     cur.execute("""CREATE TABLE IF NOT EXISTS favorite (
@@ -53,17 +53,17 @@ def add_song(artist_name, song_name, link):
                              );""")
 
 
-def select_songs():
+def get_songs():
     cur.execute("""SELECT song_id, artist_name, song_name, link 
                    FROM song;""")
 
 
-def select_users():
-    cur.execute("""SELECT song_id, artist_name, song_name, link 
-                   FROM song;""")
+def get_users():
+    cur.execute("""SELECT user_id, username 
+                   FROM user;""")
 
 
-def select_favorites(user_id=None, song_id=None):
+def get_favorites(user_id=None, song_id=None):
     if user_id:
         cur.execute(f"""SELECT favorite_id, user_id, song_id
                         FROM favorite
@@ -72,3 +72,6 @@ def select_favorites(user_id=None, song_id=None):
         cur.execute(f"""SELECT favorite_id, user_id, song_id
                         FROM favorite
                         WHERE song_id = {song_id};""")
+    else:
+        cur.execute(f"""SELECT favorite_id, user_id, song_id
+                        FROM favorite;""")

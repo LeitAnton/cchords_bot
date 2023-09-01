@@ -1,7 +1,6 @@
 import requests
 
 from bs4 import BeautifulSoup
-from collections import namedtuple
 
 
 def find_songs_am_dm(message):
@@ -25,13 +24,13 @@ def find_songs_am_dm(message):
 
 def find_songs_my_chords(message):
     URL = f"https://mychords.net/ru/search?q={'+'.join(message.split(' '))}&src=1&sortby=rel&resorder=desc&page=1"
-    print(URL)
     response = requests.get(URL)
     soup = BeautifulSoup(response.text, 'lxml')
-    print(soup)
-    print(soup.findAll('div', class_='f-message f-message-warning'))
+    print(soup.text)
+    # print(soup.findAll('div', class_='f-message f-message-warning'))
 
     return 'Yes'
+
 
 
 def get_accords(link):
