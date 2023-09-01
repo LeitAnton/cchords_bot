@@ -1,76 +1,75 @@
-import sqlite3
-from typing import List, Dict, Any
+import time
 
-con = sqlite3.connect("../database.sqlite")
-cur = con.cursor()
-
-
-#     Telegram user
-#     {'id': 576195008,
-#     'is_bot': False,
-#     'first_name': 'Антон',
-#     'username': 'x_phanton',
-#     'last_name': None,
-#     'language_code': 'en',
-#     'can_join_groups': None,
-#     'can_read_all_group_messages': None,
-#     'supports_inline_queries': None,
-#     'is_premium': None,
-#     'added_to_attachment_menu': None}
-
-def create_tables():
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS user
-    (
-        user_id  INT PRIMARY KEY,
-        username VARCHAR(255)
-    );
-    
-    CREATE TABLE IF NOT EXISTS favorite
-    (
-        id      INT PRIMARY KEY AUTO_INCREMENT,
-        user_id INT,
-        song_id INT
-    );
-    CREATE TABLE IF NOT EXISTS song
-    (
-        song_id     INT PRIMARY KEY AUTO_INCREMENT,
-        artist_name VARCHAR(255),
-        song_name   VARCHAR(255),
-        link        VARCHAR(255)
-    );""")
-    con.commit()
+from typing import Any
+from models import User, Song, Favorite
 
 
-class User:
-    @staticmethod
-    def get_users() -> list[dict[str, Any]]:
-        cur.execute("""SELECT user_id, username FROM user;""")
+class Database:
+    def __init__(self, connection, cursor):
+        self.connection = connection
+        self.cursor = cursor
+
+    def create_tables(self):
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user
+        (
+            user_id  INT PRIMARY KEY,
+            username VARCHAR(255) NOT NULL
+        );""")
+        print('Table user started')
+        time.sleep(1)
+
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS song
+        (
+            song_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+            artist_name VARCHAR(255),
+            song_name   VARCHAR(255),
+            link        TEXT
+        );""")
+        print('Table song started')
+        time.sleep(1)
+
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS favorite
+        (
+            id      INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES user (user_id),
+            song_id INTEGER NOT NULL,
+            FOREIGN KEY (song_id) REFERENCES song (song_id)
+        );""")
+        print('Table favorite started')
+        time.sleep(1)
+
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS history
+        (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id      INTEGER NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES user (user_id),
+            song_id      INTEGER NOT NULL,
+            FOREIGN KEY (song_id) REFERENCES song (song_id),
+            viewing_time VARCHAR(26)
+        );""")
+        print('Table history started')
+        self.connection.commit()
+
+    def get_users(self) -> list[dict[str, Any]]:
+        self.cursor.execute("""SELECT user_id, username FROM user;""")
         result = []
-        for user_id, username in cur.fetchall():
+        for user_id, username in self.cursor.fetchall():
             result.append(
                 {'user_id': user_id,
                  'username': username}
             )
         return result
 
-    def __int__(self, user_id, username):
-        self.user_id = user_id
-        self.username = username
-
-    def save_into_database(self):
-        cur.execute(f"""INSERT INTO user (user_id, username)
-                        VALUES ({self.user_id}, '{self.username}');""")
-        con.commit()
-
-
-class Song:
-    @staticmethod
-    def get_songs() -> list[dict[str, Any]]:
-        cur.execute("""SELECT song_id, artist_name, song_name, link 
+    def get_songs(self) -> list[dict[str, Any]]:
+        self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
                        FROM song;""")
         result = []
-        for song_id, artist_name, song_name, link in cur.fetchall():
+        for song_id, artist_name, song_name, link in self.cursor.fetchall():
             result.append(
                 {'song_id': song_id,
                  'artist_name': artist_name,
@@ -79,32 +78,19 @@ class Song:
             )
         return result
 
-    def __int__(self, artist_name: str, song_name: str, link: str):
-        self.artist_name = artist_name
-        self.song_name = song_name
-        self.link = link
-
-    def save_into_database(self):
-        cur.execute(f"""INSERT INTO song (artist_name, song_name, link)
-                        VALUES ('{self.artist_name}', '{self.song_name}', '{self.link}');""")
-        con.commit()
-
-
-class Favorite:
-    @staticmethod
-    def get_favorites(favorite_id: int = None, user_id: int = None, song_id: int = None) -> list[dict[str, Any]]:
+    def get_favorites(self, favorite_id: int = None, user_id: int = None, song_id: int = None) -> list[dict[str, Any]]:
         query = """SELECT favorite_id, user_id, song_id FROM favorite """
         if user_id:
-            cur.execute(query + f"WHERE user_id = {user_id};")
+            self.cursor.execute(query + f"WHERE user_id = {user_id};")
         elif song_id:
-            cur.execute(query + f"WHERE song_id = {song_id};")
+            self.cursor.execute(query + f"WHERE song_id = {song_id};")
         elif favorite_id:
-            cur.execute(query + f"WHERE song_id = {favorite_id};")
+            self.cursor.execute(query + f"WHERE favorite_id = {favorite_id};")
         else:
-            cur.execute(query + ";")
+            self.cursor.execute(query + ";")
 
         result = []
-        for favorite_id, user_id, song_id in cur.fetchall():
+        for favorite_id, user_id, song_id in self.cursor.fetchall():
             result.append(
                 {'favorite_id': favorite_id,
                  'user_id': user_id,
@@ -112,8 +98,42 @@ class Favorite:
             )
         return result
 
-    def __init__(self, user_id: int, song_id: int, favorite_id: int = None,):
-        self.user_id = user_id
-        self.song_id = song_id
-        self.favorite_id = favorite_id
+    def save_into_database(self, some_object):
+        if type(some_object) == User:
+            self.cursor.execute(f"""SELECT *
+                            FROM user
+                            WHERE song.user_id = {some_object.user_id}""")
 
+            if not self.cursor.fetchall():
+                self.cursor.execute(f"""INSERT INTO user (user_id, username)
+                                VALUES ({some_object.user_id}, '{some_object.username}');""")
+                self.connection.commit()
+                return 'Added'
+            return 'Already exist'
+
+        elif type(some_object) == Favorite:
+            self.cursor.execute(f"""SELECT *
+                            FROM favorite
+                            WHERE favorite.favorite_id = '{some_object.favorite_id}'
+                              AND favorite.song_id = '{some_object.song_id}'""")
+
+            if not self.cursor.fetchall():
+                self.cursor.execute(f"""INSERT INTO favorite (user_id, song_id)
+                                VALUES ({some_object.user_id}, '{some_object.song_id}');""")
+                self.connection.commit()
+                return 'Added'
+            return 'Already exist'
+
+        elif type(some_object) == Song:
+            self.cursor.execute(f"""SELECT *
+                            FROM song
+                            WHERE song.song_name = '{some_object.song_name}'
+                              AND song.artist_name = '{some_object.artist_name}'""")
+
+            if not self.cursor.fetchall():
+                self.cursor.execute(f"""INSERT INTO song (artist_name, song_name, link)
+                                VALUES ('{some_object.artist_name}', '{some_object.song_name}', '{some_object.link}');
+                                """)
+                self.connection.commit()
+                return 'Added'
+            return 'Already exist'
