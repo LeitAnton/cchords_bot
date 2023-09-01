@@ -35,9 +35,9 @@ class Database:
         (
             id      INT AUTO_INCREMENT PRIMARY KEY,
             user_id INTEGER NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES user (user_id),
             song_id INTEGER NOT NULL,
-            FOREIGN KEY (song_id) REFERENCES song (song_id)
+            FOREIGN KEY(user_id) REFERENCES user(user_id),
+            FOREIGN KEY(song_id) REFERENCES song(song_id)
         );""")
         print('Table favorite started')
         time.sleep(1)
@@ -47,10 +47,10 @@ class Database:
         (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id      INTEGER NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES user (user_id),
             song_id      INTEGER NOT NULL,
-            FOREIGN KEY (song_id) REFERENCES song (song_id),
-            viewing_time VARCHAR(26)
+            viewing_time VARCHAR(26),
+            FOREIGN KEY(user_id) REFERENCES user(user_id),
+            FOREIGN KEY(song_id) REFERENCES song(song_id)
         );""")
         print('Table history started')
         self.connection.commit()
