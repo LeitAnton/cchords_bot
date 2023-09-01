@@ -68,6 +68,10 @@ try:
                  'Макс Корж - Young haze': 'https://amdm.ru/akkordi/maks_korzh/190649/young_haze/',
                  'Макс Корж - Снадобье': 'https://amdm.ru/akkordi/maks_korzh/190651/snadobe/'}
 
+        for index, elem in enumerate(songs.keys()):
+            TRACKLIST[str(index)] = songs[elem]
+            songs[elem] = {'callback_data': f"find%{index}"}
+
         tracks_keyboard = telebot.util.quick_markup(songs, row_width=2)
         bot.send_message(message.from_user.id, 'Choose from the list below ', reply_markup=tracks_keyboard)
         pass
