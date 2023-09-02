@@ -5,6 +5,73 @@ from models import User, Song, Favorite, TemporaryBuffer
 from utils import CustomList
 
 
+def create_tables(connection, cursor):
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user
+    (
+        user_id  INT PRIMARY KEY,
+        username VARCHAR(255) NOT NULL
+    );""")
+    print('Table user started')
+    time.sleep(1)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS song
+    (
+        song_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+        artist_name VARCHAR(255),
+        song_name   VARCHAR(255),
+        link        TEXT
+    );""")
+    time.sleep(1)
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_song_id ON song (artist_name, song_name);")
+    print('Table song started')
+    time.sleep(1)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS favorite
+    (
+        favorite_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER NOT NULL,
+        song_id     INTEGER NOT NULL,
+        FOREIGN KEY(user_id) REFERENCES user(user_id),
+        FOREIGN KEY(song_id) REFERENCES song(song_id)
+    );""")
+    time.sleep(1)
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_fav_id ON favorite (user_id, song_id);")
+    print('Table favorite started')
+    time.sleep(1)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS history
+    (
+        history_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id      INTEGER NOT NULL,
+        song_id      INTEGER NOT NULL,
+        viewing_time VARCHAR(26),
+        FOREIGN KEY(user_id) REFERENCES user(user_id),
+        FOREIGN KEY(song_id) REFERENCES song(song_id)
+    );""")
+    time.sleep(1)
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_his_id ON history (user_id, song_id);")
+    print('Table history started')
+    time.sleep(1)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS temporary_buffer
+    (
+        temporary_id INTEGER PRIMARY KEY NOT NULL,
+        artist_name  VARCHAR(255),
+        song_name    VARCHAR(255),
+        link         TEXT
+    );""")
+    time.sleep(1)
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_tem_id ON temporary_buffer (artist_name, song_name);")
+    print('Table temporary_buffer started')
+
+    connection.commit()
+
+
 class Database:
     @staticmethod
     def serialize_to_models(type_of_data, data):
@@ -32,72 +99,6 @@ class Database:
     def __init__(self, connection, cursor):
         self.connection = connection
         self.cursor = cursor
-
-    def create_tables(self):
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS user
-        (
-            user_id  INT PRIMARY KEY,
-            username VARCHAR(255) NOT NULL
-        );""")
-        print('Table user started')
-        time.sleep(1)
-
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS song
-        (
-            song_id     INTEGER PRIMARY KEY AUTOINCREMENT,
-            artist_name VARCHAR(255),
-            song_name   VARCHAR(255),
-            link        TEXT
-        );""")
-        time.sleep(1)
-        self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_song_id ON song (artist_name, song_name);")
-        print('Table song started')
-        time.sleep(1)
-
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS favorite
-        (
-            favorite_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id     INTEGER NOT NULL,
-            song_id     INTEGER NOT NULL,
-            FOREIGN KEY(user_id) REFERENCES user(user_id),
-            FOREIGN KEY(song_id) REFERENCES song(song_id)
-        );""")
-        time.sleep(1)
-        self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_fav_id ON favorite (user_id, song_id);")
-        print('Table favorite started')
-        time.sleep(1)
-
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS history
-        (
-            history_id   INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id      INTEGER NOT NULL,
-            song_id      INTEGER NOT NULL,
-            viewing_time VARCHAR(26),
-            FOREIGN KEY(user_id) REFERENCES user(user_id),
-            FOREIGN KEY(song_id) REFERENCES song(song_id)
-        );""")
-        time.sleep(1)
-        self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_his_id ON history (user_id, song_id);")
-        print('Table history started')
-        time.sleep(1)
-
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS temporary_buffer
-        (
-            temporary_id INTEGER PRIMARY KEY NOT NULL,
-            artist_name  VARCHAR(255),
-            song_name    VARCHAR(255),
-            link         TEXT
-        );""")
-        time.sleep(1)
-        self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_tem_id ON temporary_buffer (artist_name, song_name);")
-        print('Table temporary_buffer started')
-
-        self.connection.commit()
 
     def save_into_database(self, some_object):
         try:
@@ -146,21 +147,21 @@ class Database:
         self.cursor.execute("""SELECT user_id, username FROM user;""")
         return self.serialize_to_models(User, self.cursor.fetchall())
 
-    def get_songs(self, song_id: list = None, songs: CustomList = None) -> list[dict[str, Any]]:
+    def get_songs(self, songs: CustomList = None, song_id_of_favorite: list = None) -> list[dict[str, Any]]:
         if songs:
             where = ''
             for song in songs:
                 where += f"""("{song.artist_name}", "{song.song_name}"), """
             self.cursor.execute("SELECT * FROM song " +
                                 f"WHERE (artist_name, song_name) in ({where[:-2]});")
-        elif song_id:
+        elif song_id_of_favorite:
             where = ''
-            for elem in song_id:
+            for elem in song_id_of_favorite:
                 where += f"'{elem}', "
-            print(f"""SELECT song_id, artist_name, song_name, link 
+            print(f"""SELECT song_id, artist_name, song_name, link
                                            FROM song
                                                WHERE song_id in ({where[:-2]});""")
-            self.cursor.execute(f"""SELECT song_id, artist_name, song_name, link 
+            self.cursor.execute(f"""SELECT song_id, artist_name, song_name, link
                                            FROM song
                                                WHERE song_id in ({where[:-2]});""")
         else:

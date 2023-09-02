@@ -37,7 +37,7 @@ class TelegramBOT:
                 self.channel.register_next_step_handler(msg, self.view_tracklist)
 
             case '/favorite':
-                self.view_tracklist(message)
+                self.view_favorite(message)
 
             case '/history':
                 self.channel.send_message(message.from_user.id, 'History:', reply_markup=self.keyboard)
@@ -70,12 +70,19 @@ class TelegramBOT:
         self.channel.send_message(message.from_user.id, 'Your favorite:')
 
         favorite = self.database.get_favorites()
-        songs = self.database.get_songs(song_id=[elem.song_id for elem in favorite])
+        songs = self.database.get_songs(song_id_of_favorite=[elem.song_id for elem in favorite])
+
+        temporary = CustomList()
+        for song in self.database.get_songs(songs=songs):
+            temporary.append(TemporaryBuffer(song.song_id, song.artist_name, song.song_name, song.link))
+
+        self.database.save_into_database(temporary)
         print(songs)
         tracks_keyboard = telebot.types.ReplyKeyboardMarkup(True, True)
         for name in songs.keys():
             tracks_keyboard.add(name)
-
+        print(tracks_keyboard)
+        print(songs.keys())
         msg = self.channel.send_message(message.from_user.id, 'Choose from the list below ',
                                         reply_markup=tracks_keyboard)
         self.channel.register_next_step_handler(msg, self.viewing_chords, type_of_request='favorite')
@@ -93,7 +100,11 @@ class TelegramBOT:
                         break
 
             case 'favorite':
-                songs = self.database.get_favorites()
+                songs = self.database.get_temporary_buffer()
+                for song in songs:
+                    if message.text == str(song):
+                        track = self.parser.get_accords(song.link)
+                        break
 
         for song in songs:
             if message.text == str(song):

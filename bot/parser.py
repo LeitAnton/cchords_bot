@@ -38,7 +38,7 @@ class Parser:
             if songs.not_in_list(song):
                 songs.append(song)
         temporary = CustomList()
-        for song in self.database.get_songs(songs):
+        for song in self.database.get_songs(songs=songs):
             temporary.append(TemporaryBuffer(song.song_id, song.artist_name, song.song_name, song.link))
 
         self.database.save_into_database(temporary)
