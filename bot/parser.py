@@ -2,13 +2,13 @@ import requests
 import datetime
 
 from bs4 import BeautifulSoup
-from models import Song
+from models import Song, TemporaryBuffer
 from utils import CustomList
 
 
 class Parser:
     @staticmethod
-    def get_accords(self, link):
+    def get_accords(link):
         response = requests.get(link)
         soup = BeautifulSoup(response.text, 'lxml')
         title = soup.find('title').text
@@ -30,13 +30,15 @@ class Parser:
         list_tr = soup.find('table', class_='items').findAll('tr')[1:10]
 
         songs = CustomList()
+
         for tr in list_tr:
             list_a = tr.find('td', class_='artist_name').findAll('a', class_='artist')
             song = Song(list_a[0].text, list_a[1].text, str(list_a[1]).split('"')[3])
-            print(song)
+
             if songs.not_in_list(song):
                 songs.append(song)
 
-            self.database.save_into_database(songs)
+        self.database.save_into_database()
+        self.database.save_into_database(songs)
 
         return songs

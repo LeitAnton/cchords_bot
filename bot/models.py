@@ -28,3 +28,12 @@ class Favorite:
         return f"{'{'}'user_id': {self.user_id}, 'song_id': {self.song_id}, 'favorite_id': {self.favorite_id}{'}'}"
 
 
+class TemporaryBuffer:
+    def __init__(self, temporary_id: int, artist_name: str, song_name: str, link: str):
+        self.temporary_id = temporary_id
+        self.artist_name = artist_name
+        self.song_name = song_name
+        self.link = link
+
+    def __str__(self):
+        return f"{'{'}'artist_name': {self.artist_name}, 'song_name': {self.song_name}, 'link': {self.link}{'}'}"

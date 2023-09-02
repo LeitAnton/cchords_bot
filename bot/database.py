@@ -1,7 +1,7 @@
 import time
 
 from typing import Any
-from models import User, Song, Favorite
+from models import User, Song, Favorite, TemporaryBuffer
 from utils import CustomList
 
 
@@ -47,7 +47,7 @@ class Database:
             link        TEXT
         );""")
         time.sleep(1)
-        self.cursor.execute("""CREATE UNIQUE INDEX IF NOT EXISTS un_song_id ON song (artist_name, song_name);""")
+        self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_song_id ON song (artist_name, song_name);")
         print('Table song started')
         time.sleep(1)
 
@@ -61,7 +61,7 @@ class Database:
             FOREIGN KEY(song_id) REFERENCES song(song_id)
         );""")
         time.sleep(1)
-        self.cursor.execute("""CREATE UNIQUE INDEX IF NOT EXISTS un_fav_id ON favorite (user_id, song_id);""")
+        self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_fav_id ON favorite (user_id, song_id);")
         print('Table favorite started')
         time.sleep(1)
 
@@ -76,8 +76,21 @@ class Database:
             FOREIGN KEY(song_id) REFERENCES song(song_id)
         );""")
         time.sleep(1)
-        self.cursor.execute("""CREATE UNIQUE INDEX IF NOT EXISTS un_his_id ON history (user_id, song_id);""")
+        self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_his_id ON history (user_id, song_id);")
         print('Table history started')
+        time.sleep(1)
+
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS temporary_buffer
+        (
+            temporary_id INTEGER PRIMARY KEY NOT NULL,
+            artist_name  VARCHAR(255),
+            song_name    VARCHAR(255),
+            link         TEXT
+        );""")
+        time.sleep(1)
+        self.cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_tem_id ON temporary_buffer (artist_name, song_name);")
+        print('Table temporary_buffer started')
 
         self.connection.commit()
 
@@ -96,10 +109,7 @@ class Database:
             elif type(some_object[0]) == Song:
                 for element in some_object:
                     values += f"""("{element.artist_name}", "{element.song_name}", "{element.link}"), """
-                print(values[:-2])
-                print("INSERT INTO song (artist_name, song_name, link) " +
-                      f"VALUES {values[:-2]}" +
-                      "on conflict do nothing;")
+
                 self.cursor.execute("INSERT INTO song (artist_name, song_name, link) " +
                                     f"VALUES {values[:-2]}" +
                                     "on conflict do nothing;")
@@ -114,17 +124,29 @@ class Database:
                                     "on conflict do nothing;")
                 self.connection.commit()
 
+            elif type(some_object[0]) == TemporaryBuffer:
+                for element in some_object:
+                    values += f"""
+                    ("{element.temporary_id}, {element.artist_name}", "{element.song_name}", "{element.link}"), """
+
+                self.cursor.execute("INSERT INTO temporary_buffer (temporary_id, artist_name, song_name, link) " +
+                                    f"VALUES {values[:-2]}" +
+                                    "on conflict do nothing;")
+                self.connection.commit()
+
         except IndexError:
             return 'List is empty'
 
     def get_users(self) -> list[dict[str, Any]]:
         self.cursor.execute("""SELECT user_id, username FROM user;""")
-        result = CustomList()
         return self.serialize_to_models(User, self.cursor.fetchall())
 
-    def get_songs(self) -> list[dict[str, Any]]:
-        self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
-                               FROM song;""")
+    def get_songs(self, songs: CustomList = None) -> list[dict[str, Any]]:
+        if songs:
+            pass
+        else:
+            self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
+                                   FROM song;""")
         return self.serialize_to_models(Song, self.cursor.fetchall())
 
     def get_favorites(self, favorite_id: int = None, user_id: int = None, song_id: int = None) -> list[dict[str, Any]]:
@@ -138,3 +160,12 @@ class Database:
         else:
             self.cursor.execute(query + ";")
         return self.serialize_to_models(Favorite, self.cursor.fetchall())
+
+    def get_temporary_buffer(self) -> list[dict[str, Any]]:
+        self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
+                               FROM temporary_buffer;""")
+        return self.serialize_to_models(Song, self.cursor.fetchall())
+
+    def clear_temporary_buffer(self):
+        self.cursor.execute("DELETE FROM temporary_buffer;")
+        self.connection.commit()
