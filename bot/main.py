@@ -1,6 +1,7 @@
-import bot
+import os
 import sqlite3
 from database import Database
+from bot import TelegramBOT
 
 
 if __name__ == '__main__':
@@ -10,7 +11,7 @@ if __name__ == '__main__':
 
         database = Database(connection, cursor)
         database.create_tables()
-
-        bot
+        BOT_TOKEN = os.environ.get('BOT_TOKEN')
+        bot = TelegramBOT(BOT_TOKEN)
     finally:
         connection.close()

@@ -41,5 +41,3 @@ def get_accords(link):
     pre = soup.find('pre', class_='field__podbor_new podbor__text')
     # return {'title': title, 'chords': [i for i in pre.text.split('\n\n') if i != '']}
     return {'title': title, 'chords': pre.text}
-
-

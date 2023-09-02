@@ -1,85 +1,111 @@
-import os
-import sqlite3
 import telebot
 
 from parser import find_songs_am_dm, get_accords
 from database import User, Favorite, Song
 
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
-bot = telebot.TeleBot(BOT_TOKEN)
+class TelegramBOT:
+    def __init__(self, token):
+        self.tracks_keyboard = telebot.types.ReplyKeyboardMarkup(True, True)
 
-keyboard = telebot.types.ReplyKeyboardMarkup(True, True)
-keyboard1 = telebot.types.ReplyKeyboardMarkup(True)
-keyboard.row('/find_chords', '/favorite', 'history', 'language')
-keyboard1.row('/back')
+        self.name_link = {}
+        self.channel = telebot.TeleBot(token, parse_mode=None)
+        print('Bot started')
 
-TRACKLIST = {}
+        self.keyboard = telebot.types.ReplyKeyboardMarkup(True, True)
+        self.keyboard.row('/find_chords', '/favorite', '/history')
 
+        self.keyboard1 = telebot.types.ReplyKeyboardMarkup(True)
+        self.keyboard1.row('/back')
 
-@bot.message_handler(commands=['start'])
-def start_messages(message):
-    bot.send_message(message.from_user.id, "What do you want to do?", reply_markup=keyboard)
+        self.favorit_keyboard = telebot.types.ReplyKeyboardMarkup(True, True)
+        self.favorit_keyboard.row('/yes', '/now')
+        self.TRACKLIST = {}
 
+        self.channel.add_message_handler(dict(
+            function=lambda msg, obj=self: obj.start_handler,
+            filters=dict(
+                commands=['start', 'back'],
+            )
+        ))
 
-@bot.message_handler(content_types=['text'])
-def after_text(message):
-    match message.text:
-        case '/find_chords':
-            msg = bot.send_message(message.from_user.id, 'Enter track name:', reply_markup=keyboard1)
-            bot.register_next_step_handler(msg, find_tracklist)
-        case '/favorite':
-            bot.send_message(message.from_user.id, 'Your favorite:')
-            favorite(message)
-        case '/history':
-            bot.send_message(message.from_user.id, 'History:', reply_markup=keyboard)
-            pass
-        case 'language':
-            bot.send_message(message.from_user.id, 'Language:', reply_markup=keyboard)
-            pass
-        case '/back':
-            start_messages(message)
+        self.channel.add_message_handler(dict(
+            function=lambda msg, obj=self: obj.after_text(msg),
+            filters=dict(
+                commands=['find_chords', 'favorite', 'history'],
+            )
+        ))
 
+        self.channel.polling()
 
-def find_tracklist(message):
-    name_link = find_songs_am_dm(message.text)
+    def start_handler(self, message):
+        print("START command")
+        self.channel.send_message(message.from_user.id, "Добро пожаловать в бота Chords BOT",
+                                  reply_markup=self.keyboard)
 
-    if name_link is None:
-        return bot.send_message(message.from_user.id, 'Nothing found', reply_markup=keyboard)
+    def after_text(self, message):
+        match message.text:
+            case '/find_chords':
+                msg = self.channel.send_message(message.from_user.id, 'Enter track name:', reply_markup=self.keyboard1)
+                self.channel.register_next_step_handler(msg, self.find_tracklist)
+            case '/favorite':
+                self.channel.send_message(message.from_user.id, 'Your favorite:', reply_markup=self.keyboard1)
+                self.view_favorite(message)
+            case '/history':
+                self.channel.send_message(message.from_user.id, 'History:', reply_markup=self.keyboard)
+                self.channel.register_next_step_handler(message, self.history)
 
-    songs = {}
-    print(name_link)
-    for index, elem in enumerate(name_link.keys()):
-        TRACKLIST[str(index)] = name_link[elem]
-        songs[elem] = {'callback_data': f"find%{index}"}
+    def find_tracklist(self, message):
+        self.channel.send_message(message.from_user.id, 'Find song ', reply_markup=self.keyboard)
 
-    tracks_keyboard = telebot.util.quick_markup(songs, row_width=2)
-    bot.send_message(message.from_user.id, 'Choose from the list below ', reply_markup=tracks_keyboard)
+        self.name_link = find_songs_am_dm(message.text)
 
+        if self.name_link is None:
+            return self.channel.send_message(message.from_user.id, 'Nothing found', reply_markup=self.keyboard)
 
-def favorite(message):
-    songs = {'Макс Корж - Напалм': 'https://amdm.ru/akkordi/maks_korzh/164782/napalm/',
-             'Макс Корж - 17 лет': 'https://amdm.ru/akkordi/maks_korzh/174154/17_let/',
-             'Макс Корж - Не говорите другу никогда': 'https://amdm.ru/akkordi/maks_korzh/188936/ne_govorite_drugu_nikogda/',
-             'Макс Корж - Young haze': 'https://amdm.ru/akkordi/maks_korzh/190649/young_haze/',
-             'Макс Корж - Снадобье': 'https://amdm.ru/akkordi/maks_korzh/190651/snadobe/'}
+        for name in self.name_link.keys():
+            self.tracks_keyboard.add(name)
 
-    for index, elem in enumerate(songs.keys()):
-        TRACKLIST[str(index)] = songs[elem]
-        songs[elem] = {'callback_data': f"find%{index}"}
+        msg = self.channel.send_message(message.from_user.id, 'Choose from the list below ',
+                                        reply_markup=self.tracks_keyboard)
+        self.channel.register_next_step_handler(msg, self.viewing_chords, type='find')
 
-    tracks_keyboard = telebot.util.quick_markup(songs, row_width=2)
-    bot.send_message(message.from_user.id, 'Choose from the list below ', reply_markup=tracks_keyboard)
-    pass
+    # def favorite(self, message):
+    #     self.favorite = {'Макс Корж - Напалм': 'https://amdm.ru/akkordi/maks_korzh/164782/napalm/',
+    #                      'Макс Корж - 17 лет': 'https://amdm.ru/akkordi/maks_korzh/174154/17_let/',
+    #                      'Макс Корж - Не говорите другу никогда':
+    #                          'https://amdm.ru/akkordi/maks_korzh/188936/ne_govorite_drugu_nikogda/',
+    #                      'Макс Корж - Young haze': 'https://amdm.ru/akkordi/maks_korzh/190649/young_haze/',
+    #                      'Макс Корж - Снадобье': 'https://amdm.ru/akkordi/maks_korzh/190651/snadobe/'}
+    #     print("Favorite")
+    #     for name in self.name_link.keys():
+    #         self.tracks_keyboard.add(name)
+    #
+    #     msg = self.channel.send_message(message.from_user.id, 'Choose from the list below ',
+    #                                     reply_markup=self.tracks_keyboard)
+    #     self.channel.register_next_step_handler(msg, self.viewing_chords)
+    def view_favorite(self, message):
+        pass
+        # for name in self.name_link_favorite.keys():
+        #     self.tracks_keyboard.add(name)
+        #
+        # msg = self.channel.send_message(message.from_user.id, 'Choose from the list below ',
+        #                                 reply_markup=self.tracks_keyboard)
+        # self.channel.register_next_step_handler(msg, self.viewing_chords, type='favorite')
 
+    def history(self, message):
+        self.channel.send_message(message.from_user.id, 'HISTORY ', reply_markup=self.keyboard)
 
-@bot.callback_query_handler(func=lambda callback: True)
-def check_callback_data(callback):
-    prefix, index = callback.data.split('%')
-    match prefix:
-        case 'find':
-            track = get_accords(str(TRACKLIST[index]))
-            bot.send_message(callback.from_user.id, track['chords'], reply_markup=keyboard)
+    def viewing_chords(self, message, type):
+        match type:
+            case 'find':
+                track = get_accords(self.name_link[message.text])
+            # case 'favorite':
+            # track = get_accords(self.favorite)
 
+        self.channel.send_message(message.from_user.id, track['chords'])
+        msg = self.channel.send_message(message.from_user.id, 'Add to favorite?', reply_markup=self.favorit_keyboard)
+        self.channel.register_next_step_handler(msg, self.add_to_favorite, track=track)
 
-bot.polling(none_stop=True, interval=0)
+    def add_to_favorite(self, message, track):
+        pass
