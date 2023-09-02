@@ -6,38 +6,23 @@ from utils import CustomList
 
 
 class Database:
-    def save_into_database(self, some_object):
-        try:
-            values = ''
-            if type(some_object[0]) == User:
-                for element in some_object:
-                    values += f"({element.user_id}, '{element.username}'), "
+    @staticmethod
+    def serialize_to_models(type_of_data, data):
+        result = CustomList()
+        if type_of_data == User:
+            for user_id, username in data:
+                result.append(User(user_id, username))
+            return result
 
-                self.cursor.execute("INSERT INTO user (user_id, username)" +
-                                    f"VALUES {values[:-2]}" +
-                                    "on conflict do nothing;")
-                self.connection.commit()
+        elif type_of_data == Song:
+            for song_id, artist_name, song_name, link in data:
+                result.append(Song(artist_name, song_name, link, song_id))
+            return result
 
-            elif type(some_object[0]) == Favorite:
-                for element in some_object:
-                    values += f"({element.user_id}, {element.song_id}), "
-
-                self.cursor.execute("INSERT INTO favorite (user_id, song_id)" +
-                                    f"VALUES {values[:-2]}" +
-                                    "on conflict do nothing;")
-                self.connection.commit()
-
-            elif type(some_object[0]) == Song:
-                for element in some_object:
-                    values += f"('{element.artist_name}', '{element.song_name}', '{element.link}'), "
-                print(values[:-2])
-                self.cursor.execute("INSERT INTO song (artist_name, song_name, link)" +
-                                    f"VALUES {values[:-2]}" +
-                                    "on conflict do updating;")
-                self.connection.commit()
-
-        except IndexError:
-            return 'List is empty'
+        elif type_of_data == Favorite:
+            for favorite_id, user_id, song_id in data:
+                result.append(Favorite(user_id, song_id, favorite_id))
+            return result
 
     def __init__(self, connection, cursor):
         self.connection = connection
@@ -96,20 +81,51 @@ class Database:
 
         self.connection.commit()
 
+    def save_into_database(self, some_object):
+        try:
+            values = ''
+            if type(some_object[0]) == User:
+                for element in some_object:
+                    values += f"({element.user_id}, '{element.username}'), "
+
+                self.cursor.execute("INSERT INTO user (user_id, username) " +
+                                    f"VALUES {values[:-2]}" +
+                                    "on conflict do nothing;")
+                self.connection.commit()
+
+            elif type(some_object[0]) == Song:
+                for element in some_object:
+                    values += f"""("{element.artist_name}", "{element.song_name}", "{element.link}"), """
+                print(values[:-2])
+                print("INSERT INTO song (artist_name, song_name, link) " +
+                      f"VALUES {values[:-2]}" +
+                      "on conflict do nothing;")
+                self.cursor.execute("INSERT INTO song (artist_name, song_name, link) " +
+                                    f"VALUES {values[:-2]}" +
+                                    "on conflict do nothing;")
+                self.connection.commit()
+
+            elif type(some_object[0]) == Favorite:
+                for element in some_object:
+                    values += f"({element.user_id}, {element.song_id}), "
+
+                self.cursor.execute("INSERT INTO favorite (user_id, song_id) " +
+                                    f"VALUES {values[:-2]}" +
+                                    "on conflict do nothing;")
+                self.connection.commit()
+
+        except IndexError:
+            return 'List is empty'
+
     def get_users(self) -> list[dict[str, Any]]:
         self.cursor.execute("""SELECT user_id, username FROM user;""")
         result = CustomList()
-        for user_id, username in self.cursor.fetchall():
-            result.append(User(user_id, username))
-        return result
+        return self.serialize_to_models(User, self.cursor.fetchall())
 
     def get_songs(self) -> list[dict[str, Any]]:
         self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
                                FROM song;""")
-        result = CustomList()
-        for song_id, artist_name, song_name, link in self.cursor.fetchall():
-            result.append(Song(artist_name, song_name, link, song_id))
-        return result
+        return self.serialize_to_models(Song, self.cursor.fetchall())
 
     def get_favorites(self, favorite_id: int = None, user_id: int = None, song_id: int = None) -> list[dict[str, Any]]:
         query = """SELECT favorite_id, user_id, song_id FROM favorite """
@@ -121,9 +137,4 @@ class Database:
             self.cursor.execute(query + f"WHERE favorite_id = {favorite_id};")
         else:
             self.cursor.execute(query + ";")
-
-        result = CustomList()
-        for favorite_id, user_id, song_id in self.cursor.fetchall():
-            result.append(Favorite(user_id, song_id, favorite_id))
-
-        return result
+        return self.serialize_to_models(Favorite, self.cursor.fetchall())
