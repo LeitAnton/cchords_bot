@@ -1,8 +1,8 @@
-from models import Song
+from models import Song, TemporaryBuffer
 
 
 class CustomList(list):
-    def not_in_list(self, element_to_check):
+    def not_in_list(self, element_to_check) -> bool:
         if type(element_to_check) == Song:
             for element_of_list in self:
                 if (element_to_check.artist_name == element_of_list.artist_name
@@ -10,10 +10,10 @@ class CustomList(list):
                     return False
             return True
 
-    def keys(self):
+    def keys(self) -> list:
         try:
-            if type(self[0]) == Song:
-                return [song.artist_name + ' - ' + song.song_name for song in self]
+            if type(self[0]) in (Song, TemporaryBuffer):
+                return [str(song) for song in self]
 
         except IndexError:
-            return None
+            return list()

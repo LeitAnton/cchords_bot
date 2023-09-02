@@ -16,7 +16,7 @@ if __name__ == '__main__':
         parser = Parser(database)
 
         BOT_TOKEN = os.environ.get('BOT_TOKEN')
-        bot = TelegramBOT(BOT_TOKEN, database, parser)
+        bot = TelegramBOT('6646654197:AAGhKjgodvxmnAvej4U9Ml0mxdOT7_PFh3Q', database, parser)
 
     finally:
         connection.close()

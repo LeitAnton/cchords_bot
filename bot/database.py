@@ -24,6 +24,11 @@ class Database:
                 result.append(Favorite(user_id, song_id, favorite_id))
             return result
 
+        elif type_of_data == TemporaryBuffer:
+            for temporary_id, artist_name, song_name, link in data:
+                result.append(TemporaryBuffer(temporary_id, artist_name, song_name, link))
+            return result
+
     def __init__(self, connection, cursor):
         self.connection = connection
         self.cursor = cursor
@@ -127,7 +132,7 @@ class Database:
             elif type(some_object[0]) == TemporaryBuffer:
                 for element in some_object:
                     values += f"""
-                    ("{element.temporary_id}, {element.artist_name}", "{element.song_name}", "{element.link}"), """
+                    ("{element.temporary_id}", "{element.artist_name}", "{element.song_name}", "{element.link}"), """
 
                 self.cursor.execute("INSERT INTO temporary_buffer (temporary_id, artist_name, song_name, link) " +
                                     f"VALUES {values[:-2]}" +
@@ -141,9 +146,23 @@ class Database:
         self.cursor.execute("""SELECT user_id, username FROM user;""")
         return self.serialize_to_models(User, self.cursor.fetchall())
 
-    def get_songs(self, songs: CustomList = None) -> list[dict[str, Any]]:
+    def get_songs(self, song_id: list = None, songs: CustomList = None) -> list[dict[str, Any]]:
         if songs:
-            pass
+            where = ''
+            for song in songs:
+                where += f"""("{song.artist_name}", "{song.song_name}"), """
+            self.cursor.execute("SELECT * FROM song " +
+                                f"WHERE (artist_name, song_name) in ({where[:-2]});")
+        elif song_id:
+            where = ''
+            for elem in song_id:
+                where += f"'{elem}', "
+            print(f"""SELECT song_id, artist_name, song_name, link 
+                                           FROM song
+                                               WHERE song_id in ({where[:-2]});""")
+            self.cursor.execute(f"""SELECT song_id, artist_name, song_name, link 
+                                           FROM song
+                                               WHERE song_id in ({where[:-2]});""")
         else:
             self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
                                    FROM song;""")
@@ -162,9 +181,9 @@ class Database:
         return self.serialize_to_models(Favorite, self.cursor.fetchall())
 
     def get_temporary_buffer(self) -> list[dict[str, Any]]:
-        self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
+        self.cursor.execute("""SELECT temporary_id, artist_name, song_name, link 
                                FROM temporary_buffer;""")
-        return self.serialize_to_models(Song, self.cursor.fetchall())
+        return self.serialize_to_models(TemporaryBuffer, self.cursor.fetchall())
 
     def clear_temporary_buffer(self):
         self.cursor.execute("DELETE FROM temporary_buffer;")
