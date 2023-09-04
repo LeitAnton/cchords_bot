@@ -1,5 +1,4 @@
 import requests
-import datetime
 
 from bs4 import BeautifulSoup
 from models import Song, TemporaryBuffer
@@ -13,16 +12,26 @@ class Parser:
         soup = BeautifulSoup(response.text, 'lxml')
         title = soup.find('title').text
 
-        pre = soup.find('pre', class_='field__podbor_new podbor__text')
-        # return {'title': title, 'chords': [i for i in pre.text.split('\n\n') if i != '']}
-        return {'title': title, 'chords': pre.text}
+        pre_text = soup.find('pre', class_='field__podbor_new podbor__text').text
+
+        separated_text = []
+        part = ''
+        for line in pre_text.split('\n'):
+            if len(part + '\n' + line) <= 4096:
+                part += '\n' + line
+            else:
+                separated_text.append(part)
+                part = '\n' + line
+        separated_text.append(part)
+
+        return {'title': title, 'chords': separated_text}
 
     def __init__(self, database):
         self.database = database
 
     def find_songs_am_dm(self, message):
-        URL = f"https://amdm.ru/search/?q={'+'.join(message.split(' '))}"
-        response = requests.get(URL)
+        url = f"https://amdm.ru/search/?q={'+'.join(message.split(' '))}"
+        response = requests.get(url)
         soup = BeautifulSoup(response.text, 'lxml')
         if 'Ничего не найдено' == soup.find('article', class_='g-padding-left').find('h1').text:
             return None
@@ -37,6 +46,7 @@ class Parser:
 
             if songs.not_in_list(song):
                 songs.append(song)
+
         temporary = CustomList()
         for song in self.database.get_songs(songs=songs):
             temporary.append(TemporaryBuffer(song.song_id, song.artist_name, song.song_name, song.link))
