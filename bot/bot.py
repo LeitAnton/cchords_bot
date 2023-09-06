@@ -31,7 +31,6 @@ class TelegramBOT:
         match message.text:
             case '/start':
                 self.channel.send_message(message.from_user.id, 'Start:')
-                # self.channel.register_next_step_handler(message, self.start_handler)
                 self.start_handler(message)
 
             case '/find_chords':
@@ -40,12 +39,10 @@ class TelegramBOT:
 
             case '/favorite':
                 self.channel.send_message(message.from_user.id, 'Your favorite:')
-                # self.channel.register_next_step_handler(message, self.view_favorite)
                 self.view_favorite(message)
 
             case '/history':
                 self.channel.send_message(message.from_user.id, 'History:', reply_markup=self.keyboard)
-                # self.channel.register_next_step_handler(message, self.view_history)
                 self.view_history(message)
 
     def start_handler(self, message):
@@ -56,20 +53,19 @@ class TelegramBOT:
 
     def find_songs(self, message):
         self.channel.send_message(message.from_user.id, 'Find song...', reply_markup=self.keyboard)
-        self.database.save_into_database(self.parser.find_songs_am_dm(message.text, self.database))
-
-        # return self.channel.register_next_step_handler(message, self.view_tracklist)
+        temporary = self.parser.find_songs_am_dm(message.text, self.database)
+        if temporary is None:
+            return self.channel.send_message(message.from_user.id, 'Nothing found', reply_markup=self.keyboard)
+        else:
+            self.database.save_into_database(temporary)
         return self.view_tracklist(message)
 
     def view_favorite(self, message):
         favorite = self.database.get_favorites()
-
         if favorite is None:
             return self.channel.send_message(message.from_user.id, 'Favorite is empty', reply_markup=self.keyboard)
 
         songs = self.database.get_songs(song_id_list=[elem.song_id for elem in favorite])
-
-        # return self.channel.register_next_step_handler(message, self.view_tracklist, songs=songs)
         return self.view_tracklist(message, songs)
 
     def view_history(self, message):
@@ -79,14 +75,11 @@ class TelegramBOT:
 
         song_id_list = list(set([elem.song_id for elem in history]))
         songs = self.database.get_songs(song_id_list=song_id_list)
-        # return self.channel.register_next_step_handler(message, self.view_tracklist, songs=songs)
         return self.view_tracklist(message, songs)
 
     def view_tracklist(self, message, songs: CustomList[Song] = None):
         if songs is None:
             temporary = self.database.get_temporary_buffer()
-            if temporary is None:
-                return self.channel.send_message(message.from_user.id, 'Nothing found', reply_markup=self.keyboard)
         else:
             temporary = CustomList()
             for song in songs:
@@ -103,7 +96,7 @@ class TelegramBOT:
 
     def view_chords(self, message):
         if message.text == '/back':
-            # return self.channel.register_next_step_handler(message, self.start_handler)
+            self.database.clear_temporary_buffer()
             return self.start_handler(message)
 
         songs = self.database.get_temporary_buffer()
@@ -137,5 +130,4 @@ class TelegramBOT:
             self.channel.send_message(message.from_user.id, 'Song deleted from favorite!')
 
         self.database.clear_temporary_buffer()
-        # return self.channel.register_next_step_handler(message, self.start_handler)
         return self.start_handler(message)

@@ -79,27 +79,27 @@ class Serializer:
         if type_of_data == User:
             for user_id, username in data:
                 result.append(User(user_id, username))
-            return result
 
         elif type_of_data == Song:
             for song_id, artist_name, song_name, link in data:
                 result.append(Song(artist_name, song_name, link, song_id))
-            return result
 
         elif type_of_data == Favorite:
             for favorite_id, user_id, song_id in data:
                 result.append(Favorite(user_id, song_id, favorite_id))
-            return result
 
         elif type_of_data == History:
             for history_id, song_id, user_id, viewing_time in data:
                 result.append(History(history_id, user_id, song_id, viewing_time))
-            return result
 
         elif type_of_data == TemporaryBuffer:
             for temporary_id, artist_name, song_name, link in data:
                 result.append(TemporaryBuffer(temporary_id, artist_name, song_name, link))
-            return result
+
+        if result == CustomList():
+            return None
+
+        return result
 
 
 class Database:
