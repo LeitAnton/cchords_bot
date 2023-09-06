@@ -74,7 +74,7 @@ def create_tables(connection, cursor):
 
 class Serializer:
     @staticmethod
-    def serialize_to_models(type_of_data: [User, Song, Favorite, History, TemporaryBuffer], data: Any) -> CustomList:
+    def serialize_to_models(type_of_data: [User, Song, Favorite, History, TemporaryBuffer], data: Any) -> [CustomList, Any]:
         result = CustomList()
         if type_of_data == User:
             for user_id, username in data:
