@@ -7,7 +7,7 @@ from utils import CustomList
 
 class Parser:
     @staticmethod
-    def get_accords(link):
+    def get_accords(link: str) -> dict[str, str]:
         response = requests.get(link)
         soup = BeautifulSoup(response.text, 'lxml')
         title = soup.find('title').text
@@ -26,10 +26,7 @@ class Parser:
 
         return {'title': title, 'chords': separated_text}
 
-    def __init__(self, database):
-        self.database = database
-
-    def find_songs_am_dm(self, message):
+    def find_songs_am_dm(self, message, database) -> CustomList[TemporaryBuffer]:
         url = f"https://amdm.ru/search/?q={'+'.join(message.split(' '))}"
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'lxml')
@@ -47,9 +44,10 @@ class Parser:
             if songs.not_in_list(song):
                 songs.append(song)
 
+        database.save_into_database(songs)
+
         temporary = CustomList()
-        for song in self.database.get_songs(songs=songs):
+        for song in database.get_songs(songs=songs):
             temporary.append(TemporaryBuffer(song.song_id, song.artist_name, song.song_name, song.link))
 
-        self.database.save_into_database(temporary)
-        self.database.save_into_database(songs)
+        return temporary

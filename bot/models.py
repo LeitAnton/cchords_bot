@@ -1,3 +1,6 @@
+import datetime
+
+
 class User:
     def __init__(self, user_id: int, username: str):
         self.user_id = user_id
@@ -20,6 +23,14 @@ class Favorite:
         self.user_id = user_id
         self.song_id = song_id
         self.favorite_id = favorite_id
+
+
+class History:
+    def __init__(self, user_id: int, song_id: int, viewing_time: str = None, history_id: int = None):
+        self.user_id = user_id
+        self.song_id = song_id
+        self.viewing_time = viewing_time
+        self.history_id = history_id
 
 
 class TemporaryBuffer:

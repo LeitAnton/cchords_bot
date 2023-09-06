@@ -10,10 +10,10 @@ if __name__ == '__main__':
         connection = sqlite3.connect("../database.sqlite", check_same_thread=False)
         cursor = connection.cursor()
 
-        create_tables(connection, cursor)
+        # create_tables(connection, cursor)
         database = Database(connection, cursor)
 
-        parser = Parser(database)
+        parser = Parser()
 
         BOT_TOKEN = os.environ.get('BOT_TOKEN')
         bot = TelegramBOT(BOT_TOKEN, database, parser)

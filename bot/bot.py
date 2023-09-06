@@ -1,7 +1,7 @@
 import telebot
 
 from utils import CustomList
-from models import User, Song, Favorite, TemporaryBuffer
+from models import User, Song, Favorite, TemporaryBuffer, History
 
 
 class TelegramBOT:
@@ -31,89 +31,87 @@ class TelegramBOT:
         match message.text:
             case '/start':
                 self.channel.send_message(message.from_user.id, 'Start:')
-                self.channel.register_next_step_handler(message, self.start_handler)
+                # self.channel.register_next_step_handler(message, self.start_handler)
+                self.start_handler(message)
 
             case '/find_chords':
                 msg = self.channel.send_message(message.from_user.id, 'Enter track name:')
-                self.channel.register_next_step_handler(msg, self.view_tracklist)
+                self.channel.register_next_step_handler(msg, self.find_songs)
 
             case '/favorite':
                 self.channel.send_message(message.from_user.id, 'Your favorite:')
-                self.channel.register_next_step_handler(message, self.view_favorite)
+                # self.channel.register_next_step_handler(message, self.view_favorite)
+                self.view_favorite(message)
 
             case '/history':
                 self.channel.send_message(message.from_user.id, 'History:', reply_markup=self.keyboard)
-                self.channel.register_next_step_handler(message, self.history)
+                # self.channel.register_next_step_handler(message, self.view_history)
+                self.view_history(message)
 
     def start_handler(self, message):
         user = User(message.from_user.id, message.from_user.username)
-        self.database.save_into_database([user])
+        self.database.save_into_database(CustomList([user]))
         self.channel.send_message(message.from_user.id, "What do you want to do?",
                                   reply_markup=self.keyboard)
 
-    def view_tracklist(self, message):
-        self.channel.send_message(message.from_user.id, 'Find song ', reply_markup=self.keyboard)
+    def find_songs(self, message):
+        self.channel.send_message(message.from_user.id, 'Find song...', reply_markup=self.keyboard)
+        self.database.save_into_database(self.parser.find_songs_am_dm(message.text, self.database))
 
-        self.parser.find_songs_am_dm(message.text)
-        temporary = self.database.get_temporary_buffer()
-
-        if temporary is None:
-            return self.channel.send_message(message.from_user.id, 'Nothing found', reply_markup=self.keyboard)
-
-        tracks_keyboard = telebot.types.ReplyKeyboardMarkup(True, True)
-        # for name in temporary.keys():
-        #     tracks_keyboard.add(str(name))
-        tracks_keyboard.keyboard = [[{'text': str(name)}] for name in temporary.keys()]
-
-        msg = self.channel.send_message(message.from_user.id, 'Choose from the list below ',
-                                        reply_markup=tracks_keyboard)
-        self.channel.register_next_step_handler(msg, self.viewing_chords)
+        # return self.channel.register_next_step_handler(message, self.view_tracklist)
+        return self.view_tracklist(message)
 
     def view_favorite(self, message):
-
         favorite = self.database.get_favorites()
-        songs = self.database.get_songs(song_id_of_favorite=[elem.song_id for elem in favorite])
 
-        temporary = CustomList()
-        for song in self.database.get_songs(songs=songs):
-            temporary.append(TemporaryBuffer(song.song_id, song.artist_name, song.song_name, song.link))
+        if favorite is None:
+            return self.channel.send_message(message.from_user.id, 'Favorite is empty', reply_markup=self.keyboard)
 
-        self.database.save_into_database(temporary)
+        songs = self.database.get_songs(song_id_list=[elem.song_id for elem in favorite])
+
+        # return self.channel.register_next_step_handler(message, self.view_tracklist, songs=songs)
+        return self.view_tracklist(message, songs)
+
+    def view_history(self, message):
+        history = self.database.get_history(message.from_user.id)
+        if history is None:
+            return self.channel.send_message(message.from_user.id, 'History is empty', reply_markup=self.keyboard)
+
+        song_id_list = list(set([elem.song_id for elem in history]))
+        songs = self.database.get_songs(song_id_list=song_id_list)
+        # return self.channel.register_next_step_handler(message, self.view_tracklist, songs=songs)
+        return self.view_tracklist(message, songs)
+
+    def view_tracklist(self, message, songs: CustomList[Song] = None):
+        if songs is None:
+            temporary = self.database.get_temporary_buffer()
+            if temporary is None:
+                return self.channel.send_message(message.from_user.id, 'Nothing found', reply_markup=self.keyboard)
+        else:
+            temporary = CustomList()
+            for song in songs:
+                temporary.append(TemporaryBuffer(song.song_id, song.artist_name, song.song_name, song.link))
+
+            self.database.save_into_database(temporary)
         tracks_keyboard = telebot.types.ReplyKeyboardMarkup(True, True)
-        for name in songs.keys():
-            tracks_keyboard.add(name)
+        tracks_keyboard.keyboard = [['/back']] + [[{'text': str(name)}] for name in temporary.keys()]
 
         msg = self.channel.send_message(message.from_user.id, 'Choose from the list below ',
                                         reply_markup=tracks_keyboard)
-        self.channel.register_next_step_handler(msg, self.viewing_chords)
 
-    def history(self, message):
-        self.channel.send_message(message.from_user.id, 'HISTORY ', reply_markup=self.keyboard)
+        return self.channel.register_next_step_handler(msg, self.view_chords)
 
-    def add_to_favorite(self, message, name_of_added_track):
-        if message.text == 'yes':
-            songs = self.database.get_temporary_buffer()
+    def view_chords(self, message):
+        if message.text == '/back':
+            # return self.channel.register_next_step_handler(message, self.start_handler)
+            return self.start_handler(message)
 
-            for song in songs:
-                if name_of_added_track == str(song):
-                    some = CustomList()
-                    favorite = Favorite(message.from_user.id, song.temporary_id)
-                    some.append(favorite)
-                    self.database.save_into_database(some)
-                    self.channel.send_message(message.from_user.id, 'Song added!')
-                    break
-
-        elif message.text == 'no':
-            pass
-
-        self.database.clear_temporary_buffer()
-        self.channel.register_next_step_handler(message, self.start_handler)
-
-    def viewing_chords(self, message):
         songs = self.database.get_temporary_buffer()
         for song in songs:
             if message.text == str(song):
                 track = self.parser.get_accords(song.link)
+                history = History(message.from_user.id, song.temporary_id)
+                self.database.save_into_database(CustomList([history]))
                 break
 
         for part in track['chords']:
@@ -121,4 +119,23 @@ class TelegramBOT:
 
         msg = self.channel.send_message(message.from_user.id, 'Add to favorite?',
                                         reply_markup=self.vote_favorite_keyboard)
-        self.channel.register_next_step_handler(msg, self.add_to_favorite, name_of_added_track=message.text)
+        return self.channel.register_next_step_handler(msg, self.add_to_favorite, name_of_added_track=message.text)
+
+    def add_to_favorite(self, message, name_of_added_track):
+        temporary_songs = self.database.get_temporary_buffer()
+        for song in temporary_songs:
+            if name_of_added_track == str(song):
+                favorite = Favorite(message.from_user.id, song.temporary_id)
+                break
+
+        if message.text == 'yes':
+            self.database.save_into_database(CustomList([favorite]))
+            self.channel.send_message(message.from_user.id, 'Song added!')
+
+        elif message.text == 'no':
+            self.database.delete_favorite(favorite)
+            self.channel.send_message(message.from_user.id, 'Song deleted from favorite!')
+
+        self.database.clear_temporary_buffer()
+        # return self.channel.register_next_step_handler(message, self.start_handler)
+        return self.start_handler(message)
