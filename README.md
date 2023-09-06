@@ -1,7 +1,7 @@
 # HOW TO START PROJECT CChords_bot
 
 
-Сreate a .env file in the bot folder and paste your token there like here:
+Сreate a bot/.env file and paste your token there like here:
 
 
 ```
