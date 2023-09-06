@@ -92,13 +92,19 @@ class TelegramBOT:
         msg = self.channel.send_message(message.from_user.id, 'Choose from the list below ',
                                         reply_markup=tracks_keyboard)
 
-        return self.channel.register_next_step_handler(msg, self.view_chords)
+        # return self.channel.register_next_step_handler(msg, self.view_chords)
+        return self.channel.register_next_step_handler(msg, self.check_answer, tracks_keyboard=tracks_keyboard)
+
+    def check_answer(self, message, tracks_keyboard):
+        if [{'text': message.text}] in tracks_keyboard.keyboard:
+            return self.view_chords(message)
+        elif message.text == '/back':
+            return self.start_handler(message)
+        else:
+            msg = self.channel.send_message(message.from_user.id, 'Not from list', reply_markup=tracks_keyboard)
+            return self.channel.register_next_step_handler(msg, self.check_answer, tracks_keyboard=tracks_keyboard)
 
     def view_chords(self, message):
-        if message.text == '/back':
-            self.database.clear_temporary_buffer()
-            return self.start_handler(message)
-
         songs = self.database.get_temporary_buffer()
         for song in songs:
             if message.text == str(song):

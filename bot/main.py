@@ -4,7 +4,6 @@ from database import Database, create_tables
 from parser import Parser
 from bot import TelegramBOT
 
-
 if __name__ == '__main__':
     try:
         connection = sqlite3.connect("../database.sqlite", check_same_thread=False)
