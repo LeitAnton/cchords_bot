@@ -1,5 +1,5 @@
 from typing import Any
-from models import User, Song, Favorite, TemporaryBuffer, History
+from models import User, Song, Favorite, TemporaryBuffer, History, AllClasses
 from utils import CustomList
 
 
@@ -14,25 +14,26 @@ def create_tables(connection, cursor):
 def serialize_to_models(type_of_data: [User, Song, Favorite, History, TemporaryBuffer], data: Any) -> [CustomList,
                                                                                                        Any]:
     result = CustomList()
-    if type_of_data == User:
-        for user_id, username in data:
-            result.append(User(user_id, username))
+    match type_of_data:
+        case AllClasses.user:
+            for user_id, username in data:
+                result.append(User(user_id, username))
 
-    elif type_of_data == Song:
-        for song_id, artist_name, song_name, link in data:
-            result.append(Song(artist_name, song_name, link, song_id))
+        case AllClasses.song:
+            for song_id, artist_name, song_name, link in data:
+                result.append(Song(artist_name, song_name, link, song_id))
 
-    elif type_of_data == Favorite:
-        for favorite_id, user_id, song_id in data:
-            result.append(Favorite(user_id, song_id, favorite_id))
+        case AllClasses.favorite:
+            for favorite_id, user_id, song_id in data:
+                result.append(Favorite(user_id, song_id, favorite_id))
 
-    elif type_of_data == History:
-        for history_id, song_id, user_id, viewing_timestamp in data:
-            result.append(History(history_id, user_id, song_id, viewing_timestamp))
+        case AllClasses.history:
+            for history_id, song_id, user_id, viewing_timestamp in data:
+                result.append(History(history_id, user_id, song_id, viewing_timestamp))
 
-    elif type_of_data == TemporaryBuffer:
-        for temporary_id, artist_name, song_name, link in data:
-            result.append(TemporaryBuffer(temporary_id, artist_name, song_name, link))
+        case AllClasses.temporary_buffer:
+            for temporary_id, artist_name, song_name, link in data:
+                result.append(TemporaryBuffer(temporary_id, artist_name, song_name, link))
 
     if result == CustomList():
         return None

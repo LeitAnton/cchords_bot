@@ -39,3 +39,11 @@ class TemporaryBuffer:
 
     def __str__(self):
         return f"{self.artist_name} - {self.song_name}"
+
+
+class AllClasses:
+    user = User
+    song = Song
+    favorite = Favorite
+    history = History
+    temporary_buffer = TemporaryBuffer
