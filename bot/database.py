@@ -49,8 +49,8 @@ class Database:
     def save_into_database(self, objects: CustomList[Any]) -> str:
         try:
             values = ''
-            match objects[0]:
-                case User():
+            match type(objects[0]):
+                case AllClasses.user:
                     for element in objects:
                         values += f"({element.user_id}, '{element.username}'), "
                     self.cursor.execute(f"""INSERT INTO user (user_id, username)
@@ -58,7 +58,7 @@ class Database:
                                             on conflict do nothing;""")
                     self.connection.commit()
 
-                case Song():
+                case AllClasses.song:
                     for element in objects:
                         values += f"""("{element.artist_name.replace('"', "'")}", 
                                 "{element.song_name.replace('"', "'")}", 
@@ -68,7 +68,7 @@ class Database:
                                             on conflict do nothing;""")
                     self.connection.commit()
 
-                case Favorite():
+                case AllClasses.favorite:
                     for element in objects:
                         values += f"({element.user_id}, {element.song_id}), "
                     self.cursor.execute(f"""INSERT INTO favorite (user_id, song_id)
@@ -76,7 +76,7 @@ class Database:
                                             on conflict do nothing;""")
                     self.connection.commit()
 
-                case History():
+                case AllClasses.history:
                     for element in objects:
                         values += f"""({element.user_id}, {element.song_id}, datetime('now')), """
                     self.cursor.execute(f"""INSERT INTO history (user_id, song_id, viewing_timestamp)
@@ -84,7 +84,7 @@ class Database:
                                             on conflict do nothing;""")
                     self.connection.commit()
 
-                case TemporaryBuffer():
+                case AllClasses.temporary_buffer:
                     for element in objects:
                         values += f"""
                         ("{element.temporary_id}", "{element.artist_name.replace('"', "'")}", 
