@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from models import Song, TemporaryBuffer
 from utils import CustomList
 
+
 message_len = 4096
 
 
@@ -19,10 +20,10 @@ def get_accords(link: str) -> dict[str, str]:
     part = ''
     for line in pre_text.split('\n'):
         if len(f'{part}{os.linesep}{line}') <= message_len:
-            part += '\n' + line
+            part += f'{os.linesep}{line}'
         else:
             separated_text.append(part)
-            part = '\n' + line
+            part = f'{os.linesep}{line}'
     separated_text.append(part)
 
     return {'title': title, 'chords': separated_text}
