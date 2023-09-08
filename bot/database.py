@@ -114,7 +114,6 @@ class Database:
                 where += f"""("{song.artist_name.replace('"', "'")}", "{song.song_name.replace('"', "'")}"), """
             self.cursor.execute(f"""SELECT * FROM song 
                                     WHERE (artist_name, song_name) in ({where[:-2]});""")
-
         elif song_id_list:
             where = ''
             for elem in song_id_list:
@@ -122,7 +121,6 @@ class Database:
             self.cursor.execute(f"""SELECT song_id, artist_name, song_name, link
                                     FROM song
                                     WHERE song_id in ({where[:-2]});""")
-
         else:
             self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
                                    FROM song;""")
