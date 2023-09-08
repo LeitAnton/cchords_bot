@@ -48,52 +48,51 @@ class Database:
     def save_into_database(self, objects: CustomList[Any]) -> str:
         try:
             values = ''
-            if type(objects[0]) is User:
-                for element in objects:
-                    values += f"({element.user_id}, '{element.username}'), "
+            match objects[0]:
+                case User():
+                    for element in objects:
+                        values += f"({element.user_id}, '{element.username}'), "
+                    self.cursor.execute(f"""INSERT INTO user (user_id, username)
+                                            VALUES {values[:-2]}
+                                            on conflict do nothing;""")
+                    self.connection.commit()
 
-                self.cursor.execute(f"""INSERT INTO user (user_id, username)
-                                        VALUES {values[:-2]}
-                                        on conflict do nothing;""")
-                self.connection.commit()
+                case Song():
+                    for element in objects:
+                        values += f"""("{element.artist_name.replace('"', "'")}", 
+                                "{element.song_name.replace('"', "'")}", 
+                                "{element.link.replace('"', "'")}"), """
+                    self.cursor.execute(f"""INSERT INTO song (artist_name, song_name, link)
+                                            VALUES {values[:-2]}
+                                            on conflict do nothing;""")
+                    self.connection.commit()
 
-            elif type(objects[0]) is Song:
-                for element in objects:
-                    values += f"""("{element.artist_name.replace('"', "'")}", 
-                            "{element.song_name.replace('"', "'")}", 
-                            "{element.link.replace('"', "'")}"), """
-                self.cursor.execute(f"""INSERT INTO song (artist_name, song_name, link)
-                                        VALUES {values[:-2]}
-                                        on conflict do nothing;""")
-                self.connection.commit()
+                case Favorite():
+                    for element in objects:
+                        values += f"({element.user_id}, {element.song_id}), "
+                    self.cursor.execute(f"""INSERT INTO favorite (user_id, song_id)
+                                            VALUES {values[:-2]}
+                                            on conflict do nothing;""")
+                    self.connection.commit()
 
-            elif type(objects[0]) is Favorite:
-                for element in objects:
-                    values += f"({element.user_id}, {element.song_id}), "
+                case History():
+                    for element in objects:
+                        values += f"""({element.user_id}, {element.song_id}, datetime('now')), """
+                    self.cursor.execute(f"""INSERT INTO history (user_id, song_id, viewing_timestamp)
+                                            VALUES {values[:-2]}
+                                            on conflict do nothing;""")
+                    self.connection.commit()
 
-                self.cursor.execute(f"""INSERT INTO favorite (user_id, song_id)
-                                        VALUES {values[:-2]}
-                                        on conflict do nothing;""")
-                self.connection.commit()
+                case TemporaryBuffer():
+                    for element in objects:
+                        values += f"""
+                        ("{element.temporary_id}", "{element.artist_name.replace('"', "'")}", 
+                        "{element.song_name.replace('"', "'")}", "{element.link.replace('"', "'")}"), """
+                    self.cursor.execute(f"""INSERT INTO temporary_buffer (temporary_id, artist_name, song_name, link)
+                                            VALUES {values[:-2]} 
+                                            on conflict do nothing;""")
+                    self.connection.commit()
 
-            elif type(objects[0]) is History:
-                for element in objects:
-                    values += f"""({element.user_id}, {element.song_id}, datetime('now')), """
-                self.cursor.execute(f"""INSERT INTO history (user_id, song_id, viewing_timestamp)
-                                        VALUES {values[:-2]}
-                                        on conflict do nothing;""")
-                self.connection.commit()
-
-            elif type(objects[0]) is TemporaryBuffer:
-                for element in objects:
-                    values += f"""
-                    ("{element.temporary_id}", "{element.artist_name.replace('"', "'")}", 
-                    "{element.song_name.replace('"', "'")}", "{element.link.replace('"', "'")}"), """
-
-                self.cursor.execute(f"""INSERT INTO temporary_buffer (temporary_id, artist_name, song_name, link)
-                                        VALUES {values[:-2]} 
-                                        on conflict do nothing;""")
-                self.connection.commit()
             return 'Added'
 
         except IndexError:
@@ -114,6 +113,7 @@ class Database:
                 where += f"""("{song.artist_name.replace('"', "'")}", "{song.song_name.replace('"', "'")}"), """
             self.cursor.execute(f"""SELECT * FROM song 
                                     WHERE (artist_name, song_name) in ({where[:-2]});""")
+
         elif song_id_list:
             where = ''
             for elem in song_id_list:
@@ -121,6 +121,7 @@ class Database:
             self.cursor.execute(f"""SELECT song_id, artist_name, song_name, link
                                     FROM song
                                     WHERE song_id in ({where[:-2]});""")
+
         else:
             self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
                                    FROM song;""")
