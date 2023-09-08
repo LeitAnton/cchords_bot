@@ -23,10 +23,10 @@ class Favorite:
 
 
 class History:
-    def __init__(self, user_id: int, song_id: int, viewing_time: str = None, history_id: int = None):
+    def __init__(self, user_id: int, song_id: int, viewing_timestamp: str = None, history_id: int = None):
         self.user_id = user_id
         self.song_id = song_id
-        self.viewing_time = viewing_time
+        self.viewing_timestamp = viewing_timestamp
         self.history_id = history_id
 
 

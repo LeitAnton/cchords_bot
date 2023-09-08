@@ -17,3 +17,10 @@ class CustomList(list):
 
         except IndexError:
             return list()
+
+
+def create_tracks_keyboard(temporary: CustomList) -> list[list[dict]]:
+    result = []
+    for name in temporary.keys():
+        result.append([{'text': str(name)}])
+    return result
