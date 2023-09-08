@@ -1,74 +1,13 @@
-import time
-
 from typing import Any
 from models import User, Song, Favorite, TemporaryBuffer, History
 from utils import CustomList
 
 
 def create_tables(connection, cursor):
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS user
-    (
-        user_id  INT PRIMARY KEY,
-        username VARCHAR(255) NOT NULL
-    );""")
-    print('Table user started')
-    time.sleep(1)
+    with open('./sql_queries/create_database.sql', 'r') as sql_file:
+        sql_script = sql_file.read()
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS song
-    (
-        song_id     INTEGER PRIMARY KEY AUTOINCREMENT,
-        artist_name VARCHAR(255),
-        song_name   VARCHAR(255),
-        link        TEXT
-    );""")
-    time.sleep(1)
-    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_song_id ON song (artist_name, song_name);")
-    print('Table song started')
-    time.sleep(1)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS favorite
-    (
-        favorite_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id     INTEGER NOT NULL,
-        song_id     INTEGER NOT NULL,
-        FOREIGN KEY(user_id) REFERENCES user(user_id),
-        FOREIGN KEY(song_id) REFERENCES song(song_id)
-    );""")
-    time.sleep(1)
-    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_fav_id ON favorite (user_id, song_id);")
-    print('Table favorite started')
-    time.sleep(1)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS history
-    (
-        history_id   INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id      INTEGER NOT NULL,
-        song_id      INTEGER NOT NULL,
-        viewing_time VARCHAR(26),
-        FOREIGN KEY(user_id) REFERENCES user(user_id),
-        FOREIGN KEY(song_id) REFERENCES song(song_id)
-    );""")
-    time.sleep(1)
-    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_his_id ON history (user_id, song_id);")
-    print('Table history started')
-    time.sleep(1)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS temporary_buffer
-    (
-        temporary_id INTEGER PRIMARY KEY NOT NULL,
-        artist_name  VARCHAR(255),
-        song_name    VARCHAR(255),
-        link         TEXT
-    );""")
-    time.sleep(1)
-    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS un_tem_id ON temporary_buffer (artist_name, song_name);")
-    print('Table temporary_buffer started')
-
+    cursor.executescript(sql_script)
     connection.commit()
 
 
@@ -90,8 +29,8 @@ class Serializer:
                 result.append(Favorite(user_id, song_id, favorite_id))
 
         elif type_of_data == History:
-            for history_id, song_id, user_id, viewing_time in data:
-                result.append(History(history_id, user_id, song_id, viewing_time))
+            for history_id, song_id, user_id, viewing_timestamp in data:
+                result.append(History(history_id, user_id, song_id, viewing_timestamp))
 
         elif type_of_data == TemporaryBuffer:
             for temporary_id, artist_name, song_name, link in data:
@@ -111,51 +50,51 @@ class Database:
     def save_into_database(self, objects: CustomList[Any]) -> str:
         try:
             values = ''
-            if type(objects[0]) == User:
+            if type(objects[0]) is User:
                 for element in objects:
                     values += f"({element.user_id}, '{element.username}'), "
 
-                self.cursor.execute("INSERT INTO user (user_id, username) " +
-                                    f"VALUES {values[:-2]}" +
-                                    "on conflict do nothing;")
+                self.cursor.execute(f"""INSERT INTO user (user_id, username)
+                                        VALUES {values[:-2]}
+                                        on conflict do nothing;""")
                 self.connection.commit()
 
-            elif type(objects[0]) == Song:
+            elif type(objects[0]) is Song:
                 for element in objects:
                     values += f"""("{element.artist_name.replace('"', "'")}", 
                             "{element.song_name.replace('"', "'")}", 
                             "{element.link.replace('"', "'")}"), """
-                self.cursor.execute("INSERT INTO song (artist_name, song_name, link) " +
-                                    f"VALUES {values[:-2]}" +
-                                    "on conflict do nothing;")
+                self.cursor.execute(f"""INSERT INTO song (artist_name, song_name, link)
+                                        VALUES {values[:-2]}
+                                        on conflict do nothing;""")
                 self.connection.commit()
 
-            elif type(objects[0]) == Favorite:
+            elif type(objects[0]) is Favorite:
                 for element in objects:
                     values += f"({element.user_id}, {element.song_id}), "
 
-                self.cursor.execute("INSERT INTO favorite (user_id, song_id) " +
-                                    f"VALUES {values[:-2]}" +
-                                    "on conflict do nothing;")
+                self.cursor.execute(f"""INSERT INTO favorite (user_id, song_id)
+                                        VALUES {values[:-2]}
+                                        on conflict do nothing;""")
                 self.connection.commit()
 
-            elif type(objects[0]) == History:
+            elif type(objects[0]) is History:
                 for element in objects:
                     values += f"""({element.user_id}, {element.song_id}, datetime('now')), """
-                self.cursor.execute("INSERT INTO history (user_id, song_id, viewing_time) " +
-                                    f"VALUES {values[:-2]}" +
-                                    "on conflict do nothing;")
+                self.cursor.execute(f"""INSERT INTO history (user_id, song_id, viewing_timestamp)
+                                        VALUES {values[:-2]}
+                                        on conflict do nothing;""")
                 self.connection.commit()
 
-            elif type(objects[0]) == TemporaryBuffer:
+            elif type(objects[0]) is TemporaryBuffer:
                 for element in objects:
                     values += f"""
                     ("{element.temporary_id}", "{element.artist_name.replace('"', "'")}", 
                     "{element.song_name.replace('"', "'")}", "{element.link.replace('"', "'")}"), """
 
-                self.cursor.execute("INSERT INTO temporary_buffer (temporary_id, artist_name, song_name, link) " +
-                                    f"VALUES {values[:-2]}" +
-                                    "on conflict do nothing;")
+                self.cursor.execute(f"""INSERT INTO temporary_buffer (temporary_id, artist_name, song_name, link)
+                                        VALUES {values[:-2]} 
+                                        on conflict do nothing;""")
                 self.connection.commit()
             return 'Added'
 
@@ -175,15 +114,15 @@ class Database:
             where = ''
             for song in songs:
                 where += f"""("{song.artist_name.replace('"', "'")}", "{song.song_name.replace('"', "'")}"), """
-            self.cursor.execute("SELECT * FROM song " +
-                                f"WHERE (artist_name, song_name) in ({where[:-2]});")
+            self.cursor.execute(f"""SELECT * FROM song 
+                                    WHERE (artist_name, song_name) in ({where[:-2]});""")
         elif song_id_list:
             where = ''
             for elem in song_id_list:
                 where += f"'{elem}', "
             self.cursor.execute(f"""SELECT song_id, artist_name, song_name, link
-                                           FROM song
-                                               WHERE song_id in ({where[:-2]});""")
+                                    FROM song
+                                    WHERE song_id in ({where[:-2]});""")
         else:
             self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
                                    FROM song;""")
@@ -202,7 +141,7 @@ class Database:
         return Serializer.serialize_to_models(Favorite, self.cursor.fetchall())
 
     def get_history(self, user_id: int):
-        self.cursor.execute(f"""SELECT history_id, user_id, song_id, viewing_time
+        self.cursor.execute(f"""SELECT history_id, user_id, song_id, viewing_timestamp
                                 FROM history
                                 WHERE user_id = {user_id};""")
         return Serializer.serialize_to_models(History, self.cursor.fetchall())
