@@ -14,6 +14,9 @@ class Song:
     def __str__(self):
         return f"{self.artist_name} - {self.song_name}"
 
+    def __eq__(self, obj):
+        return isinstance(obj, Song) and obj.artist_name == self.artist_name and obj.song_name == self.song_name
+
 
 class Favorite:
     def __init__(self, user_id: int, song_id: int, favorite_id: int = None):

@@ -1,6 +1,5 @@
 from typing import Any
 from models import User, Song, Favorite, TemporaryBuffer, History, AllClasses
-from utils import CustomList
 
 
 def create_tables(connection, cursor):
@@ -11,9 +10,9 @@ def create_tables(connection, cursor):
     connection.commit()
 
 
-def serialize_to_models(type_of_data: [User, Song, Favorite, History, TemporaryBuffer], data: Any) -> [CustomList,
+def serialize_to_models(type_of_data: [User, Song, Favorite, History, TemporaryBuffer], data: Any) -> [list,
                                                                                                        Any]:
-    result = CustomList()
+    result = []
     match type_of_data:
         case AllClasses.user:
             for user_id, username in data:
@@ -35,7 +34,7 @@ def serialize_to_models(type_of_data: [User, Song, Favorite, History, TemporaryB
             for temporary_id, artist_name, song_name, link in data:
                 result.append(TemporaryBuffer(temporary_id, artist_name, song_name, link))
 
-    if result == CustomList():
+    if not result:
         return None
 
     return result
@@ -46,7 +45,7 @@ class Database:
         self.connection = connection
         self.cursor = cursor
 
-    def save_into_database(self, objects: CustomList[Any]) -> str:
+    def save_into_database(self, objects: list[Any]) -> str:
         try:
             values = ''
             match type(objects[0]):
@@ -99,7 +98,7 @@ class Database:
         except IndexError:
             return 'List is empty'
 
-    def get_users(self, user_id: int = None) -> CustomList[User]:
+    def get_users(self, user_id: int = None) -> list[User]:
         if user_id:
             self.cursor.execute(f"""SELECT user_id, username FROM user
                                     WHERE user_id = {user_id};""")
@@ -107,7 +106,7 @@ class Database:
             self.cursor.execute("""SELECT user_id, username FROM user;""")
         return serialize_to_models(User, self.cursor.fetchall())
 
-    def get_songs(self, songs: CustomList[Song] = None, song_id_list: list[int] = None) -> CustomList[Song]:
+    def get_songs(self, songs: list[Song] = None, song_id_list: list[int] = None) -> list[Song]:
         if songs:
             where = ''
             for song in songs:
@@ -124,9 +123,10 @@ class Database:
         else:
             self.cursor.execute("""SELECT song_id, artist_name, song_name, link 
                                    FROM song;""")
-        return serialize_to_models(Song, self.cursor.fetchall())
+        data = self.cursor.fetchall()
+        return serialize_to_models(Song, data)
 
-    def get_favorites(self, favorite_id: int = None, user_id: int = None, song_id: int = None) -> CustomList[Favorite]:
+    def get_favorites(self, favorite_id: int = None, user_id: int = None, song_id: int = None) -> list[Favorite]:
         query = """SELECT favorite_id, user_id, song_id FROM favorite """
         if user_id:
             self.cursor.execute(query + f"WHERE user_id = {user_id};")
@@ -144,7 +144,7 @@ class Database:
                                 WHERE user_id = {user_id};""")
         return serialize_to_models(History, self.cursor.fetchall())
 
-    def get_temporary_buffer(self) -> CustomList[TemporaryBuffer]:
+    def get_temporary_buffer(self) -> list[TemporaryBuffer]:
         self.cursor.execute("""SELECT temporary_id, artist_name, song_name, link 
                                FROM temporary_buffer;""")
         return serialize_to_models(TemporaryBuffer, self.cursor.fetchall())

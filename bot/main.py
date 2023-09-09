@@ -3,6 +3,7 @@ import sqlite3
 from database import Database, create_tables
 from bot import TelegramBOT
 
+
 if __name__ == '__main__':
     connection = None
     try:

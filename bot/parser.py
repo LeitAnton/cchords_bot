@@ -3,7 +3,6 @@ import requests
 
 from bs4 import BeautifulSoup
 from models import Song, TemporaryBuffer
-from utils import CustomList
 
 
 message_len = 4096
@@ -29,7 +28,7 @@ def get_accords(link: str) -> dict[str, str]:
     return {'title': title, 'chords': separated_text}
 
 
-def find_songs_on_site_am_dm(message, database) -> [CustomList[TemporaryBuffer], None]:
+def find_songs_on_site_am_dm(message, database) -> [list[TemporaryBuffer], None]:
     url = f"https://amdm.ru/search/?q={'+'.join(message.split(' '))}"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'lxml')
@@ -38,18 +37,17 @@ def find_songs_on_site_am_dm(message, database) -> [CustomList[TemporaryBuffer],
 
     list_tr = soup.find('table', class_='items').findAll('tr')[1:10]
 
-    songs = CustomList()
+    songs = []
 
     for tr in list_tr:
         list_a = tr.find('td', class_='artist_name').findAll('a', class_='artist')
         song = Song(list_a[0].text, list_a[1].text, str(list_a[1]).split('"')[3])
-
-        if songs.not_in_list(song):
+        if song not in songs:
             songs.append(song)
 
     database.save_into_database(songs)
 
-    temporary = CustomList()
+    temporary = []
     for song in database.get_songs(songs=songs):
         temporary.append(TemporaryBuffer(song.song_id, song.artist_name, song.song_name, song.link))
 

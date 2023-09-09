@@ -2,8 +2,14 @@ import telebot
 import logging
 
 from parser import find_songs_on_site_am_dm, get_accords
-from utils import CustomList, create_tracks_keyboard
 from models import User, Song, Favorite, TemporaryBuffer, History
+
+
+def create_tracks_keyboard(temporary: list) -> list[list[dict]]:
+    result = []
+    for name in [str(song) for song in temporary]:
+        result.append([{'text': str(name)}])
+    return result
 
 
 class TelegramBOT:
@@ -48,7 +54,7 @@ class TelegramBOT:
 
     def start_handling(self, message):
         user = User(message.from_user.id, message.from_user.username)
-        self.database.save_into_database(CustomList([user]))
+        self.database.save_into_database([user])
         self.channel.send_message(message.from_user.id, "What do you want to do?",
                                   reply_markup=self.keyboard)
 
@@ -78,13 +84,11 @@ class TelegramBOT:
         songs = self.database.get_songs(song_id_list=song_id_list)
         return self.view_tracklist(message, songs)
 
-    def view_tracklist(self, message, songs: CustomList[Song] = None):
+    def view_tracklist(self, message, songs: [Song] = None):
         if songs is None:
             temporary = self.database.get_temporary_buffer()
         else:
-            temporary = CustomList()
-            for song in songs:
-                temporary.append(TemporaryBuffer(song.song_id, song.artist_name, song.song_name, song.link))
+            temporary = [TemporaryBuffer(song.song_id, song.artist_name, song.song_name, song.link) for song in songs]
 
             self.database.save_into_database(temporary)
         tracks_keyboard = telebot.types.ReplyKeyboardMarkup(True)
@@ -112,7 +116,7 @@ class TelegramBOT:
             if message.text == str(song):
                 track = get_accords(song.link)
                 history = History(message.from_user.id, song.temporary_id)
-                self.database.save_into_database(CustomList([history]))
+                self.database.save_into_database([history])
                 break
 
         for part in track['chords']:
@@ -124,7 +128,7 @@ class TelegramBOT:
 
     def add_to_favorite(self, message, name_of_added_track):
         temporary_songs = self.database.get_temporary_buffer()
-        favorite = CustomList()
+        favorite = []
         for song in temporary_songs:
             if name_of_added_track == str(song):
                 favorite.append(Favorite(message.from_user.id, song.temporary_id))
