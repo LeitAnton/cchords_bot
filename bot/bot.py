@@ -54,6 +54,7 @@ class TelegramBOT:
 
     def start_handling(self, message):
         user = User(message.from_user.id, message.from_user.username)
+        self.database.clear_temporary_buffer()
         self.database.save_into_database([user])
         self.channel.send_message(message.from_user.id, "What do you want to do?",
                                   reply_markup=self.keyboard)
@@ -141,6 +142,12 @@ class TelegramBOT:
         elif message.text == 'no':
             self.database.delete_favorite(favorite[0])
             self.channel.send_message(message.from_user.id, 'Song deleted from favorite!')
+
+        elif message.text:
+            msg = self.channel.send_message(message.chat.id, 'Add to favorite?',
+                                            reply_markup=self.vote_favorite_keyboard)
+            return self.channel.register_next_step_handler(msg, self.add_to_favorite,
+                                                           name_of_added_track=name_of_added_track)
 
         self.database.clear_temporary_buffer()
         return self.start_handling(message)
